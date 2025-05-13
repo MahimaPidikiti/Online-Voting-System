@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Secure Online Voting System</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f2f2f2;
+      margin: 0;
+      padding: 20px;
+      text-align: center;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      max-width: 600px;
+      margin: 0 auto;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+    }
+    input, button {
+      padding: 10px;
+      margin: 8px;
+      width: 80%;
+      max-width: 300px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background-color: #28a745;
+      color: white;
+      border: none;
+    }
+    button:hover {
+      background-color: #218838;
+    }
+    #voteSection {
+      display: none;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Enter Your Voting Details</h2>
+    <input type="text" id="name" placeholder="Full Name" required />
+    <input type="email" id="email" placeholder="Email" required />
+    <input type="text" id="voterId" placeholder="Voter ID" required />
+    <br>
+    <button onclick="verifyVoter()">Vote Now</button>
+
+    <div id="voteSection">
+      <h3>Cast Your Vote</h3>
+      <button onclick="castVote('Candidate 1')">Candidate 1</button>
+      <button onclick="castVote('Candidate 2')">Candidate 2</button>
+      <button onclick="castVote('Candidate 3')">Candidate 3</button>
+
+      <h3>Vote Results</h3>
+      <div id="voteResults"></div>
+    </div>
+  </div>
+
+  <script>
+    let voterInfo = {};
+
+    function verifyVoter() {
+      const name = document.getElementById('name').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const voterId = document.getElementById('voterId').value.trim();
+
+      if (!name || !email || !voterId) {
+        alert("Please fill in all fields.");
+        return;
+      }
+
+      voterInfo = { name, email, voterId };
+
+      fetch('/check-voter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(voterInfo)
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.exists) {
+          alert("You have already voted!");
+        } else {
+          document.getElementById('voteSection').style.display = 'block';
+        }
+      })
+      .catch(err => alert("Error verifying voter"));
+    }
+
+    function castVote(candidate) {
+      fetch('/vote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ candidate, ...voterInfo })
+      })
+      .then(res => res.json())
+      .then(data => {
+        alert(data.message);
+        document.getElementById('voteSection').style.display = 'none';
+        fetchVotes();
+      })
+      .catch(err => alert("Error casting vote"));
+    }
+
+    function fetchVotes() {
+      fetch('/votes')
+        .then(res => res.json())
+        .then(data => {
+          let totalVotes = 0;
+          let resultHtml = '<ul>';
+          for (let c in data) {
+            resultHtml += `<li>${c}: ${data[c]} votes</li>`;
+            totalVotes += data[c];
+          }
+          resultHtml += '</ul>';
+          resultHtml += `<p><strong>Total Votes:</strong> ${totalVotes}</p>`;
+          document.getElementById('voteResults').innerHTML = resultHtml;
+        });
+    }
+
+    fetchVotes();
+    setInterval(fetchVotes, 5000);
+  </script>
+</body>
+</html>
